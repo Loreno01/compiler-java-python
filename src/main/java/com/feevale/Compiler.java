@@ -201,6 +201,9 @@ public class Compiler {
     private static final int T_SYSTEM = 46;
     private static final int T_OUT = 47;
     private static final int T_PRINTLN = 48;
+    private static final int T_STRING_LITERAL = 49;
+    private static final int T_INCREMENT = 50;
+    private static final int T_DECREMENT = 51;
     private static final int T_END_SOURCE = 90;
     private static final int T_LEXICAL_ERROR = 98;
     private static final int T_NULL = 99;
@@ -247,6 +250,7 @@ public class Compiler {
     private static String forStart;
     private static String forEnd;
     private static String forStep;
+    private static String forConditionOperator;
     private static boolean insideForHeader = false;
     private static boolean readingForStep = false;
 
@@ -283,7 +287,10 @@ public class Compiler {
         SWITCH_BEGIN(24),
         CASE_BEGIN(25),
         DEFAULT_BEGIN(26),
-        CASE_BREAK(27);
+        CASE_BREAK(27),
+        INCREMENT(30),
+        DECREMENT(31),
+        STRING_LITERAL(32);
 
         private final int code;
 
@@ -735,6 +742,7 @@ public class Compiler {
             searchNextToken();
             if (token == T_PARENTHESIS_OPEN) {
                 insideForHeader = true;
+                forConditionOperator = null;
                 searchNextToken();
                 assignment();
                 forVariable = nodo_1.getCodeLowerCase();
@@ -756,6 +764,7 @@ public class Compiler {
                                 searchNextToken();
                                 cmds();
                                 if (token == T_BRACE_CLOSE) {
+                                    indentationLevel--;
                                     searchNextToken();
                                 } else {
                                     logSyntaxError("Esperava '}', mas encontrou: " + lexeme);
@@ -974,6 +983,8 @@ public class Compiler {
     }
 
     // <ASSIGNMENT> ::= <ID> '=' <E>
+    // <ASSIGNMENT> ::= <ID> '++'
+    // <ASSIGNMENT> ::= <ID> '--'
     private static void assignment()
             throws IOException, LexicalErrorException, SyntacticErrorException, SemanticErrorException {
         id();
@@ -982,11 +993,17 @@ public class Compiler {
             searchNextToken();
             e();
             semanticRule(SemanticAction.ASSIGNMENT);
+        } else if (token == T_INCREMENT) {
+            searchNextToken();
+            semanticRule(SemanticAction.INCREMENT);
+        } else if (token == T_DECREMENT) {
+            searchNextToken();
+            semanticRule(SemanticAction.DECREMENT);
         } else {
-            logSyntaxError("Esperava '=', mas encontrou: " + lexeme);
+            logSyntaxError("Esperava '=', '++' ou '--', mas encontrou: " + lexeme);
         }
 
-        accumulateRecognizedSyntacticRule("<ASSIGNMENT> ::= <ID> '=' <E>");
+        accumulateRecognizedSyntacticRule("<ASSIGNMENT> ::= <ID> '=' <E> | <ID> '++' | <ID> '--'");
     }
 
     // <CONDITION> ::= <E> '>' <E>
@@ -1000,31 +1017,49 @@ public class Compiler {
         e();
         switch (token) {
             case T_GREATER:
+                if (insideForHeader) {
+                    forConditionOperator = ">";
+                }
                 searchNextToken();
                 e();
                 semanticRule(SemanticAction.GREATER);
                 break;
             case T_SMALLER:
+                if (insideForHeader) {
+                    forConditionOperator = "<";
+                }
                 searchNextToken();
                 e();
                 semanticRule(SemanticAction.SMALLER);
                 break;
             case T_GREATER_EQUAL:
+                if (insideForHeader) {
+                    forConditionOperator = ">=";
+                }
                 searchNextToken();
                 e();
                 semanticRule(SemanticAction.GREATER_EQUAL);
                 break;
             case T_SMALLER_EQUAL:
+                if (insideForHeader) {
+                    forConditionOperator = "<=";
+                }
                 searchNextToken();
                 e();
                 semanticRule(SemanticAction.SMALLER_EQUAL);
                 break;
             case T_EQUAL_EQUAL:
+                if (insideForHeader) {
+                    forConditionOperator = "==";
+                }
                 searchNextToken();
                 e();
                 semanticRule(SemanticAction.EQUAL_EQUAL);
                 break;
             case T_DIFFERENT:
+                if (insideForHeader) {
+                    forConditionOperator = "!=";
+                }
                 searchNextToken();
                 e();
                 semanticRule(SemanticAction.DIFFERENT);
@@ -1114,6 +1149,17 @@ public class Compiler {
                 semanticRule(SemanticAction.VARIABLE_USAGE);
                 accumulateRecognizedSyntacticRule("<F> ::= <ID>");
                 break;
+            case T_STRING_LITERAL:
+
+                semanticRule(SemanticAction.STRING_LITERAL);
+
+                searchNextToken();
+
+                accumulateRecognizedSyntacticRule(
+                    "<F> ::= <STRING_LITERAL>"
+                );
+            
+                break;                
             default:
                 logSyntaxError("Fator inválido. Encontrou: " + lexeme);
         }
@@ -1238,6 +1284,28 @@ public class Compiler {
                 moveLookAhead();
             }
             token = T_NUMBER;
+        }else if (lookAhead == '"') {
+            sbLexeme.append(lookAhead);
+            moveLookAhead();
+            while (lookAhead != '"' && lookAhead != END_FILE) {
+            
+                sbLexeme.append(lookAhead);
+                moveLookAhead();
+            
+            }
+        
+            if (lookAhead == END_FILE) {
+            
+                token = T_LEXICAL_ERROR;
+                lexeme = sbLexeme.toString();
+            
+                logLexicalError("String não finalizada: " + lexeme);
+            
+            }
+        
+            sbLexeme.append(lookAhead);
+            moveLookAhead();
+            token = T_STRING_LITERAL;
         } else if (lookAhead == '{') {
             sbLexeme.append(lookAhead);
             token = T_BRACE_OPEN;
@@ -1280,12 +1348,24 @@ public class Compiler {
             moveLookAhead();
         } else if (lookAhead == '+') {
             sbLexeme.append(lookAhead);
-            token = T_ADD;
             moveLookAhead();
+            if (lookAhead == '+') {
+                sbLexeme.append(lookAhead);
+                moveLookAhead();
+                token = T_INCREMENT;
+            } else {
+                token = T_ADD;
+            }
         } else if (lookAhead == '-') {
             sbLexeme.append(lookAhead);
-            token = T_SUBTRACT;
             moveLookAhead();
+            if (lookAhead == '-') {
+                sbLexeme.append(lookAhead);
+                moveLookAhead();
+                token = T_DECREMENT;
+            } else {
+                token = T_SUBTRACT;
+            }
         } else if (lookAhead == '*') {
             sbLexeme.append(lookAhead);
             moveLookAhead();
@@ -1526,6 +1606,12 @@ public class Compiler {
             case T_PRINTLN:
                 tokenLexeme.append("T_PRINTLN");
                 break;
+            case T_INCREMENT:
+                tokenLexeme.append("T_INCREMENT");
+                break;
+            case T_DECREMENT:
+                tokenLexeme.append("T_DECREMENT");
+                break;
             case T_END_SOURCE:
                 tokenLexeme.append("T_END_SOURCE");
                 break;
@@ -1586,12 +1672,10 @@ public class Compiler {
                     semanticStack.push(variableName, ruleNumber);
                 }
                 break;
-            case ASSIGNMENT:
-                        
+                case ASSIGNMENT:
                 nodo_2 = semanticStack.pop();
                 nodo_1 = semanticStack.pop();
-                                   
-                if(readingForStep){  
+                    if (readingForStep) {
                     String expression = nodo_2.getCodeLowerCase();
                 
                     if(expression.contains("+")){
@@ -1613,17 +1697,27 @@ public class Compiler {
                         forStep = "1";
                     
                     }
-                
-                }
-                else if(!insideForHeader){
-                
+                    } else if (!insideForHeader) {
                     codePython.append(tabulation(indentationLevel));
-                    codePython.append(
-                        nodo_1.getCodeLowerCase()
-                        + " = "
-                        + nodo_2.getCodeLowerCase()
-                        + "\n"
-                    );
+                    codePython.append(nodo_1.getCodeLowerCase() + " = " + nodo_2.getCodeLowerCase() + "\n");
+                    }
+                break;
+            case INCREMENT:
+                nodo_1 = semanticStack.pop();
+                if (readingForStep) {
+                    forStep = "1";
+                } else {
+                    codePython.append(tabulation(indentationLevel));
+                    codePython.append(nodo_1.getCodeLowerCase() + " = " + nodo_1.getCodeLowerCase() + " + 1\n");
+                }
+                break;
+            case DECREMENT:
+                nodo_1 = semanticStack.pop();
+                if (readingForStep) {
+                    forStep = "-1";
+                } else {
+                    codePython.append(tabulation(indentationLevel));
+                    codePython.append(nodo_1.getCodeLowerCase() + " = " + nodo_1.getCodeLowerCase() + " - 1\n");
                 }
                 break;
             case IF_BEGIN:
@@ -1633,7 +1727,6 @@ public class Compiler {
                 indentationLevel++;
                 break;
             case ELSE_BEGIN:
-                indentationLevel--;
                 codePython.append(tabulation(indentationLevel));
                 codePython.append("else:\n");
                 indentationLevel++;
@@ -1645,8 +1738,25 @@ public class Compiler {
                 indentationLevel++;
                 break;
             case FOR_BEGIN:
+                String rangeEnd = forEnd;
+                if (forConditionOperator != null) {
+                    switch (forConditionOperator) {
+                        case "<=":
+                            if (forStep == null || !forStep.startsWith("-")){
+                                rangeEnd = forEnd + " + 1";
+                            }
+                            break;
+                        case ">=":
+                            if (forStep == null || forStep.startsWith("-")) {
+                                rangeEnd = forEnd + " - 1";
+                            }
+                            break;
+                        default:
+                            break;
+                    }
+                }
                 codePython.append(tabulation(indentationLevel));
-                codePython.append("for " + forVariable + " in range(" + forStart + ", " + forEnd);
+                codePython.append("for " + forVariable + " in range(" + forStart + ", " + rangeEnd);
                 if (!forStep.equals("1")) {
                     codePython.append(", " + forStep);
                 }
@@ -1747,7 +1857,12 @@ public class Compiler {
                 indentationLevel++;
                 break;
             case CASE_BREAK:
-                // break do switch Java não possui equivalente em Python
+                // Break do switch Java não possui equivalente em Python
+                break;
+            case STRING_LITERAL:
+                semanticStack.push(lexeme, ruleNumber);
+                break;
+            default:
                 break;
         }
     }
@@ -1798,6 +1913,9 @@ public class Compiler {
      */
     private static String tabulation(int quantity) {
         StringBuffer stringBuffer = new StringBuffer();
+        if (quantity < 0) {
+            quantity = 0;
+        }
         for (int t = 0; t < quantity; t++) {
             stringBuffer.append("    ");
         }
