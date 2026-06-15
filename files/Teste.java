@@ -1,6 +1,12 @@
 public class Teste {
     public static void main(String[] args) {
         int x, a, b, c, i;
+        double f;
+        boolean condition;
+        String name;
+
+        name = "Fulano";
+        
         x = 10;
 
         b = x * 5;

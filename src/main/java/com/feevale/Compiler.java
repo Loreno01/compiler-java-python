@@ -235,7 +235,6 @@ public class Compiler {
     private static String lastLexeme;
     private static StringBuffer codePython = new StringBuffer();
     private static int indentationLevel = 0;
-    private static SemanticStackNode nodo_0;
     private static SemanticStackNode nodo_1;
     private static SemanticStackNode nodo_2;
     private static SemanticStack semanticStack = new SemanticStack();
@@ -259,31 +258,31 @@ public class Compiler {
         VARIABLE_DECLARE(1),
         VARIABLE_USAGE(2),
         ASSIGNMENT(3),
-        ADD(3),
-        SUBTRACT(4),
-        MULTIPLY(5),
-        DIVIDE(6),
-        MOD(7),
-        PARENTHESIS(8),
-        NUMBER(9),
+        ADD(4),
+        SUBTRACT(5),
+        MULTIPLY(6),
+        DIVIDE(7),
+        MOD(8),
+        PARENTHESIS(9),
+        NUMBER(10),
         BLOCK_END(11),
         IF_BEGIN(12),
         ELSE_BEGIN(13),
-        WHILE_BEGIN(10),
-        FOR_BEGIN(21),
-        GREATER(14),
-        SMALLER(15),
-        GREATER_EQUAL(16),
-        SMALLER_EQUAL(17),
-        EQUAL_EQUAL(18),
-        DIFFERENT(19),
-        PRINT(20),
-        LESS_TAB(22),
-        MORE_TAB(23),
-        SWITCH_BEGIN(24),
-        CASE_BEGIN(25),
-        DEFAULT_BEGIN(26),
-        CASE_BREAK(27);
+        WHILE_BEGIN(14),
+        FOR_BEGIN(15),
+        GREATER(16),
+        SMALLER(17),
+        GREATER_EQUAL(18),
+        SMALLER_EQUAL(19),
+        EQUAL_EQUAL(20),
+        DIFFERENT(21),
+        PRINT(22),
+        LESS_TAB(23),
+        MORE_TAB(24),
+        SWITCH_BEGIN(25),
+        CASE_BEGIN(26),
+        DEFAULT_BEGIN(27),
+        CASE_BREAK(28);
 
         private final int code;
 
@@ -1587,43 +1586,20 @@ public class Compiler {
                 }
                 break;
             case ASSIGNMENT:
-                        
                 nodo_2 = semanticStack.pop();
                 nodo_1 = semanticStack.pop();
-                                   
-                if(readingForStep){  
+                if (readingForStep) {
                     String expression = nodo_2.getCodeLowerCase();
-                
-                    if(expression.contains("+")){
-                    
-                        forStep = expression.substring(
-                            expression.indexOf("+") + 1
-                        ).trim();
-                    
-                    }
-                    else if(expression.contains("-")){
-                    
-                        forStep = "-" + expression.substring(
-                            expression.indexOf("-") + 1
-                        ).trim();
-                    
-                    }
-                    else{
-                    
+                    if (expression.contains("+")) {
+                        forStep = expression.substring(expression.indexOf("+") + 1).trim();
+                    } else if (expression.contains("-")) {
+                        forStep = "-" + expression.substring(expression.indexOf("-") + 1).trim();
+                    } else {
                         forStep = "1";
-                    
                     }
-                
-                }
-                else if(!insideForHeader){
-                
+                } else if (!insideForHeader) {
                     codePython.append(tabulation(indentationLevel));
-                    codePython.append(
-                        nodo_1.getCodeLowerCase()
-                        + " = "
-                        + nodo_2.getCodeLowerCase()
-                        + "\n"
-                    );
+                    codePython.append(nodo_1.getCodeLowerCase() + " = " + nodo_2.getCodeLowerCase() + "\n");
                 }
                 break;
             case IF_BEGIN:
@@ -1747,7 +1723,9 @@ public class Compiler {
                 indentationLevel++;
                 break;
             case CASE_BREAK:
-                // break do switch Java não possui equivalente em Python
+                // Break do switch Java não possui equivalente em Python
+                break;
+            default:
                 break;
         }
     }
@@ -1770,23 +1748,17 @@ public class Compiler {
     /**
      * Insere uma variável na tabela de símbolos
      * 
-     * @param lastLexeme Último lexema reconhecido
+     * @param lastLexeme   Último lexema reconhecido
      * @param variableType Tipo da variável em Java
      * @throws SemanticErrorException
      */
     private static void insertIntoSymbolsTable(String lastLexeme, String variableType)
             throws SemanticErrorException {
-            
+
         if (symbolsTable.containsKey(lastLexeme)) {
-        
-            throw new SemanticErrorException(
-                "Variável " + lastLexeme + " já declarada!\nLinha: " + currentLine
-            );
-        
+            throw new SemanticErrorException("Variável " + lastLexeme + " já declarada!\nLinha: " + currentLine);
         } else {
-        
             symbolsTable.put(lastLexeme, variableType);
-        
         }
     }
 
@@ -1851,30 +1823,25 @@ public class Compiler {
     }
 
     /**
-     * Define valor padrão para variáveis não inicializadas em Python, de acordo com seu tipo em Java
+     * Define valor padrão para variáveis não inicializadas em Python, de acordo com
+     * seu tipo em Java
      * 
      * @param type Tipo da variável em Java
      */
-    private static String pythonDefaultValue(String type){
-
-        switch(type){
-
+    private static String pythonDefaultValue(String type) {
+        switch (type) {
             case "int":
                 return "0";
-
             case "double":
                 return "0.0";
-
             case "String":
                 return "\"\"";
-
             case "boolean":
                 return "False";
-
             default:
                 return "None";
         }
-    }    
+    }
 
     /**
      * Registra um erro semântico encontrado durante a análise semântica
