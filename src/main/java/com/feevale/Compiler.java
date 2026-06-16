@@ -240,7 +240,6 @@ public class Compiler {
     private static String lastLexeme;
     private static StringBuffer codePython = new StringBuffer();
     private static int indentationLevel = 0;
-    private static SemanticStackNode nodo_0;
     private static SemanticStackNode nodo_1;
     private static SemanticStackNode nodo_2;
     private static SemanticStack semanticStack = new SemanticStack();
@@ -265,13 +264,13 @@ public class Compiler {
         VARIABLE_DECLARE(1),
         VARIABLE_USAGE(2),
         ASSIGNMENT(3),
-        ADD(3),
-        SUBTRACT(4),
-        MULTIPLY(5),
-        DIVIDE(6),
-        MOD(7),
-        PARENTHESIS(8),
-        NUMBER(9),
+        ADD(4),
+        SUBTRACT(5),
+        MULTIPLY(6),
+        DIVIDE(7),
+        MOD(8),
+        PARENTHESIS(9),
+        NUMBER(10),
         BLOCK_END(11),
         IF_BEGIN(12),
         ELSE_BEGIN(13),
@@ -1936,23 +1935,17 @@ public class Compiler {
     /**
      * Insere uma variável na tabela de símbolos
      * 
-     * @param lastLexeme Último lexema reconhecido
+     * @param lastLexeme   Último lexema reconhecido
      * @param variableType Tipo da variável em Java
      * @throws SemanticErrorException
      */
     private static void insertIntoSymbolsTable(String lastLexeme, String variableType)
             throws SemanticErrorException {
-            
+
         if (symbolsTable.containsKey(lastLexeme)) {
-        
-            throw new SemanticErrorException(
-                "Variável " + lastLexeme + " já declarada!\nLinha: " + currentLine
-            );
-        
+            throw new SemanticErrorException("Variável " + lastLexeme + " já declarada!\nLinha: " + currentLine);
         } else {
-        
             symbolsTable.put(lastLexeme, variableType);
-        
         }
     }
 
@@ -2020,30 +2013,25 @@ public class Compiler {
     }
 
     /**
-     * Define valor padrão para variáveis não inicializadas em Python, de acordo com seu tipo em Java
+     * Define valor padrão para variáveis não inicializadas em Python, de acordo com
+     * seu tipo em Java
      * 
      * @param type Tipo da variável em Java
      */
-    private static String pythonDefaultValue(String type){
-
-        switch(type){
-
+    private static String pythonDefaultValue(String type) {
+        switch (type) {
             case "int":
                 return "0";
-
             case "double":
                 return "0.0";
-
             case "String":
                 return "\"\"";
-
             case "boolean":
                 return "False";
-
             default:
                 return "None";
         }
-    }    
+    }
 
     /**
      * Registra um erro semântico encontrado durante a análise semântica
