@@ -1,7 +1,7 @@
 /*
 **===========================================================================
 **  @file    LexicalErrorException.java
-**  @author  Eduardo Lorscheiter e Loreno Enrique Ribeiro 
+**  @author  Eduardo Lorscheiter, Lucca Bagesteiro, Loreno Enrique Ribeiro e Yolanda Colombo
 **  @class   Projeto - Compiladores
 **  @date    Junho/2026
 **  @version 1.0

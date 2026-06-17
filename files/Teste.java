@@ -1,17 +1,20 @@
 public class Teste {
     public static void main(String[] args) {
-        int x, a, b, c, i, contador;
+        int x, a, b, c, i, count;
         double f;
         boolean condition;
         boolean condition2;
         String name;
+        int test = 2 * 10;
 
         x = 10;
         name = "FuLaNo";
         System.out.println(name);
+        System.out.println("\'Teste aspas simples\'");
 
         condition = true;
         condition2 = false;
+
         b = x * 5;
         c = x / 5;
         a = (b + c) % 7;
@@ -19,7 +22,9 @@ public class Teste {
         System.out.println(a);
         System.out.println(f);
 
-        if (x > 2) {
+        if (x > 2)
+
+        {
             x = x + 1;
             System.out.println(x);
         } else {
@@ -28,6 +33,10 @@ public class Teste {
 
         if (x < 2) {
             System.out.println(1);
+        }
+
+        if (b != c) {
+            System.out.println("\'b\' é diferente de \'c\'");
         }
 
         while (x > 7) {
@@ -47,8 +56,8 @@ public class Teste {
             System.out.println(i);
         }
 
-        contador = 12;
-        switch (contador) {
+        count = 12;
+        switch (count) {
             case 10:
                 System.out.println(10);
                 break;

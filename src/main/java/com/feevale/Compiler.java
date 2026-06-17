@@ -1,7 +1,7 @@
 /*
 **===========================================================================
 **  @file    Compiler.java
-**  @author  Eduardo Lorscheiter e Loreno Enrique Ribeiro 
+**  @author  Eduardo Lorscheiter, Lucca Bagesteiro, Loreno Enrique Ribeiro e Yolanda Colombo 
 **  @class   Projeto - Compiladores
 **  @date    Junho/2026
 **  @version 1.0
@@ -625,7 +625,7 @@ public class Compiler {
     private static void ids()
             throws IOException, LexicalErrorException, SyntacticErrorException, SemanticErrorException {
         id();
-        
+
         // Check if there's an assignment in the declaration
         if (token == T_EQUAL) {
             searchNextToken();
@@ -638,11 +638,11 @@ public class Compiler {
         } else {
             semanticRule(SemanticAction.VARIABLE_DECLARE);
         }
-        
+
         while (token == T_COMMA) {
             searchNextToken();
             id();
-            
+
             if (token == T_EQUAL) {
                 searchNextToken();
                 e();
@@ -1176,15 +1176,9 @@ public class Compiler {
                 accumulateRecognizedSyntacticRule("<F> ::= <ID>");
                 break;
             case T_STRING_LITERAL:
-
                 semanticRule(SemanticAction.STRING_LITERAL);
-
                 searchNextToken();
-
-                accumulateRecognizedSyntacticRule(
-                    "<F> ::= <STRING_LITERAL>"
-                );
-            
+                accumulateRecognizedSyntacticRule("<F> ::= <STRING_LITERAL>");
                 break;
             case T_TRUE:
                 semanticRule(SemanticAction.BOOLEAN_LITERAL);
@@ -1324,25 +1318,18 @@ public class Compiler {
                 moveLookAhead();
             }
             token = T_NUMBER;
-        }else if (lookAhead == '"') {
+        } else if (lookAhead == '"') {
             sbLexeme.append(lookAhead);
             moveLookAhead();
             while (lookAhead != '"' && lookAhead != END_FILE) {
-            
                 sbLexeme.append(lookAhead);
                 moveLookAhead();
-            
             }
-        
             if (lookAhead == END_FILE) {
-            
                 token = T_LEXICAL_ERROR;
                 lexeme = sbLexeme.toString();
-            
                 logLexicalError("String não finalizada: " + lexeme);
-            
             }
-        
             sbLexeme.append(lookAhead);
             moveLookAhead();
             token = T_STRING_LITERAL;
@@ -1718,28 +1705,24 @@ public class Compiler {
                     semanticStack.push(variableName, ruleNumber);
                 }
                 break;
-                case ASSIGNMENT:
+            case ASSIGNMENT:
                 nodo_2 = semanticStack.pop();
                 nodo_1 = semanticStack.pop();
-                    if (readingForStep) {
+                if (readingForStep) {
                     String expression = nodo_2.getCodeLowerCase();
-                    if(expression.contains("+")){
+                    if (expression.contains("+")) {
                         forStep = expression.substring(
-                            expression.indexOf("+") + 1
-                        ).trim();
-                    }
-                    else if(expression.contains("-")){                    
+                                expression.indexOf("+") + 1).trim();
+                    } else if (expression.contains("-")) {
                         forStep = "-" + expression.substring(
-                            expression.indexOf("-") + 1
-                        ).trim();                    
-                    }
-                    else{
+                                expression.indexOf("-") + 1).trim();
+                    } else {
                         forStep = "1";
                     }
-                    } else if (!insideForHeader) {
+                } else if (!insideForHeader) {
                     codePython.append(tabulation(indentationLevel));
                     codePython.append(nodo_1.getCodeLowerCase() + " = " + nodo_2.getCodeLowerCase() + "\n");
-                    }
+                }
                 break;
             case INCREMENT:
                 nodo_1 = semanticStack.pop();
@@ -1781,7 +1764,7 @@ public class Compiler {
                 if (forConditionOperator != null) {
                     switch (forConditionOperator) {
                         case "<=":
-                            if (forStep == null || !forStep.startsWith("-")){
+                            if (forStep == null || !forStep.startsWith("-")) {
                                 rangeEnd = forEnd + " + 1";
                             }
                             break;
@@ -1902,15 +1885,13 @@ public class Compiler {
                 semanticStack.push(lexeme, ruleNumber);
                 break;
             case BOOLEAN_LITERAL:
-            if (lexeme.equals("true")) {
-                semanticStack.push("True", ruleNumber);
-            }
-            else if (lexeme.equals("false")) {
-                semanticStack.push("False", ruleNumber);
-            }
-            else {
-                semanticStack.push(lexeme, ruleNumber);
-            }
+                if (lexeme.equals("true")) {
+                    semanticStack.push("True", ruleNumber);
+                } else if (lexeme.equals("false")) {
+                    semanticStack.push("False", ruleNumber);
+                } else {
+                    semanticStack.push(lexeme, ruleNumber);
+                }
                 break;
             default:
                 break;
