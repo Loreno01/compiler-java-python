@@ -28,7 +28,11 @@ public class SemanticStack {
     }
 
     public SemanticStackNode push(String c, int r) {
-        SemanticStackNode semanticStackNode = new SemanticStackNode(c, r);
+        return push(c, r, null);
+    }
+
+    public SemanticStackNode push(String c, int r, String type) {
+        SemanticStackNode semanticStackNode = new SemanticStackNode(c, r, type);
         stack.push(semanticStackNode);
 
         return semanticStackNode;

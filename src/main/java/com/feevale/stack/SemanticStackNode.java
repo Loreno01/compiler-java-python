@@ -14,14 +14,20 @@ package com.feevale.stack;
 public class SemanticStackNode {
     private String code;
     private int ruleStacked;
+    private String type;
 
     public SemanticStackNode() {
 
     }
 
     public SemanticStackNode(String code, int ruleStacked) {
+        this(code, ruleStacked, null);
+    }
+
+    public SemanticStackNode(String code, int ruleStacked, String type) {
         this.code = new String(code);
         this.ruleStacked = ruleStacked;
+        this.type = type;
     }
 
     /**
@@ -50,6 +56,20 @@ public class SemanticStackNode {
      */
     public void setRuleStacked(int ruleStacked) {
         this.ruleStacked = ruleStacked;
+    }
+
+    /**
+     * @return Retorna o tipo Java do valor empilhado
+     */
+    public String getType() {
+        return type;
+    }
+
+    /**
+     * @param type Tipo Java do valor empilhado
+     */
+    public void setType(String type) {
+        this.type = type;
     }
 
     /**

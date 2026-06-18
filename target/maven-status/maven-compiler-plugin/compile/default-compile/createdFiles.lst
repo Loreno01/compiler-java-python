@@ -1,0 +1,8 @@
+com\feevale\exception\LexicalErrorException.class
+com\feevale\exception\SyntacticErrorException.class
+com\feevale\Compiler$SemanticAction.class
+com\feevale\Compiler.class
+com\feevale\FileSelectionFilter.class
+com\feevale\exception\SemanticErrorException.class
+com\feevale\stack\SemanticStackNode.class
+com\feevale\stack\SemanticStack.class

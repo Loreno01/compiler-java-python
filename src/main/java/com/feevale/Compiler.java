@@ -272,6 +272,8 @@ public class Compiler {
     // Controle de switch/case
     private static boolean switchFirstCase = true;
 
+    private static boolean headlessMode = false;
+
     // Ações semânticas
     private enum SemanticAction {
         START_PROGRAM(0),
@@ -321,8 +323,76 @@ public class Compiler {
         }
     }
 
+    /**
+     * Compila um arquivo Java para Python sem interface gráfica (uso em testes e CLI).
+     *
+     * @param javaSource  Arquivo .java de entrada
+     * @param pythonDest  Arquivo .py de saída
+     * @throws IOException
+     * @throws LexicalErrorException
+     * @throws SyntacticErrorException
+     * @throws SemanticErrorException
+     */
+    public static void compileFile(File javaSource, File pythonDest)
+            throws IOException, LexicalErrorException, SyntacticErrorException, SemanticErrorException {
+        headlessMode = true;
+        resetCompilationState();
+        pythonFile = pythonDest;
+
+        if (!openSource(javaSource)) {
+            throw new FileNotFoundException("Arquivo Java inválido: " + javaSource);
+        }
+
+        identifiedTokens.append("Tokens reconhecidos: \n\n");
+        recognizedRules.append("\n\nRegras reconhecidas: \n\n");
+
+        compileJavaPython();
+        gravaSaida();
+        closeSource();
+        headlessMode = false;
+    }
+
+    private static void resetCompilationState() {
+        javaFile = null;
+        pythonFile = null;
+        lookAhead = 0;
+        token = T_NULL;
+        lexeme = null;
+        pointer = 0;
+        currentLine = 0;
+        currentColumn = 0;
+        sourceLine = "";
+        errorMessage = "";
+        identifiedTokens = new StringBuffer();
+        recognizedRules = new StringBuffer();
+        compilationState = E_WITHOUT_ERRORS;
+        variableName = null;
+        currentType = null;
+        lastLexeme = null;
+        codePython = new StringBuffer();
+        indentationLevel = 0;
+        nodo_1 = null;
+        nodo_2 = null;
+        semanticStack = new SemanticStack();
+        symbolsTable = new HashMap<String, String>();
+        variavel = null;
+        forVariable = null;
+        forStart = null;
+        forEnd = null;
+        forStep = null;
+        forConditionOperator = null;
+        insideForHeader = false;
+        readingForStep = false;
+        switchFirstCase = true;
+    }
+
     public static void main(String[] args) throws LexicalErrorException {
         try {
+            if (args.length >= 2) {
+                compileFile(new File(args[0]), new File(args[1]));
+                return;
+            }
+
             if (!openJavaFile())
                 return;
             if (!openPythonFile())
@@ -446,14 +516,11 @@ public class Compiler {
             FileWriter fw;
             fw = new FileWriter(pythonFile);
             BufferedWriter bfw = new BufferedWriter(fw);
-            String codigo = codePython.toString();
-
-            System.out.println("Tem CRLF? " + codigo.contains("\r\n"));
-System.out.println("Tem CR? " + codigo.contains("\r"));
-
             bfw.write(codePython.toString());
             bfw.close();
-            showInformationMessage("Arquivo salvo: " + pythonFile, "Salvando arquivo!");
+            if (!headlessMode) {
+                showInformationMessage("Arquivo salvo: " + pythonFile, "Salvando arquivo!");
+            }
         } catch (IOException e) {
             showErrorMessage(e.getMessage(), "Erro de Entrada/Saída");
         }
@@ -1845,6 +1912,23 @@ System.out.println("Tem CR? " + codigo.contains("\r"));
     }
 
     /**
+     * Promove tipos numéricos conforme regras aritméticas do Java
+     */
+    private static String promoteArithmeticType(String type1, String type2) {
+        if ("double".equals(type1) || "double".equals(type2)) {
+            return "double";
+        }
+        return "int";
+    }
+
+    /**
+     * Infere o tipo de um literal numérico
+     */
+    private static String inferLiteralType(String lexeme) {
+        return (lexeme != null && lexeme.contains(".")) ? "double" : "int";
+    }
+
+    /**
      * Valida a regra semântica e gera o código em Python
      * 
      * @param ruleNumber Número da regra
@@ -1864,7 +1948,7 @@ System.out.println("Tem CR? " + codigo.contains("\r"));
                 break;
             case VARIABLE_USAGE:
                 if (checkExistsInSymbolsTable(variableName))
-                    semanticStack.push(variableName, ruleNumber);
+                    semanticStack.push(variableName, ruleNumber, symbolsTable.get(variableName));
                 break;
             case ASSIGNMENT:
                 nodo_2 = semanticStack.pop();
@@ -1886,34 +1970,50 @@ System.out.println("Tem CR? " + codigo.contains("\r"));
             case ADD:
                 nodo_2 = semanticStack.pop();
                 nodo_1 = semanticStack.pop();
-                semanticStack.push(nodo_1.getCodeLowerCase() + " + " + nodo_2.getCodeLowerCase(), ruleNumber);
+                semanticStack.push(
+                        nodo_1.getCodeLowerCase() + " + " + nodo_2.getCodeLowerCase(),
+                        ruleNumber,
+                        promoteArithmeticType(nodo_1.getType(), nodo_2.getType()));
                 break;
             case SUBTRACT:
                 nodo_2 = semanticStack.pop();
                 nodo_1 = semanticStack.pop();
-                semanticStack.push(nodo_1.getCodeLowerCase() + " - " + nodo_2.getCodeLowerCase(), ruleNumber);
+                semanticStack.push(
+                        nodo_1.getCodeLowerCase() + " - " + nodo_2.getCodeLowerCase(),
+                        ruleNumber,
+                        promoteArithmeticType(nodo_1.getType(), nodo_2.getType()));
                 break;
             case MULTIPLY:
                 nodo_2 = semanticStack.pop();
                 nodo_1 = semanticStack.pop();
-                semanticStack.push(nodo_1.getCodeLowerCase() + " * " + nodo_2.getCodeLowerCase(), ruleNumber);
+                semanticStack.push(
+                        nodo_1.getCodeLowerCase() + " * " + nodo_2.getCodeLowerCase(),
+                        ruleNumber,
+                        promoteArithmeticType(nodo_1.getType(), nodo_2.getType()));
                 break;
             case DIVIDE:
                 nodo_2 = semanticStack.pop();
                 nodo_1 = semanticStack.pop();
-                semanticStack.push(nodo_1.getCodeLowerCase() + " / " + nodo_2.getCodeLowerCase(), ruleNumber);
+                String divideOperator = ("int".equals(nodo_1.getType()) && "int".equals(nodo_2.getType())) ? "//" : "/";
+                semanticStack.push(
+                        nodo_1.getCodeLowerCase() + " " + divideOperator + " " + nodo_2.getCodeLowerCase(),
+                        ruleNumber,
+                        promoteArithmeticType(nodo_1.getType(), nodo_2.getType()));
                 break;
             case MOD:
                 nodo_2 = semanticStack.pop();
                 nodo_1 = semanticStack.pop();
-                semanticStack.push(nodo_1.getCodeLowerCase() + " % " + nodo_2.getCodeLowerCase(), ruleNumber);
+                semanticStack.push(
+                        nodo_1.getCodeLowerCase() + " % " + nodo_2.getCodeLowerCase(),
+                        ruleNumber,
+                        promoteArithmeticType(nodo_1.getType(), nodo_2.getType()));
                 break;
             case PARENTHESIS:
                 nodo_1 = semanticStack.pop();
-                semanticStack.push("(" + nodo_1.getCodeLowerCase() + ")", ruleNumber);
+                semanticStack.push("(" + nodo_1.getCodeLowerCase() + ")", ruleNumber, nodo_1.getType());
                 break;
             case NUMBER:
-                semanticStack.push(lastLexeme, ruleNumber);
+                semanticStack.push(lastLexeme, ruleNumber, inferLiteralType(lastLexeme));
                 break;
             case GREATER:
                 nodo_2 = semanticStack.pop();
@@ -1996,6 +2096,9 @@ System.out.println("Tem CR? " + codigo.contains("\r"));
                 break;
             case FOR_BEGIN:
                 String rangeEnd = forEnd;
+                if (forStep == null) {
+                    forStep = "1";
+                }
                 if (forConditionOperator != null) {
                     switch (forConditionOperator) {
                         case "<=":
@@ -2041,15 +2144,15 @@ System.out.println("Tem CR? " + codigo.contains("\r"));
                 // Break do switch Java não possui equivalente em Python
                 break;
             case STRING_LITERAL:
-                semanticStack.push(lexeme, ruleNumber);
+                semanticStack.push(lexeme, ruleNumber, "String");
                 break;
             case BOOLEAN_LITERAL:
                 if (lexeme.equals("true")) {
-                    semanticStack.push("True", ruleNumber);
+                    semanticStack.push("True", ruleNumber, "boolean");
                 } else if (lexeme.equals("false")) {
-                    semanticStack.push("False", ruleNumber);
+                    semanticStack.push("False", ruleNumber, "boolean");
                 } else {
-                    semanticStack.push(lexeme, ruleNumber);
+                    semanticStack.push(lexeme, ruleNumber, "boolean");
                 }
                 break;
             case PRINT:
@@ -2241,6 +2344,10 @@ System.out.println("Tem CR? " + codigo.contains("\r"));
      * @param title   Título da mensagem
      */
     private static void showErrorMessage(String message, String title) {
+        if (headlessMode) {
+            System.err.println(title + ": " + message);
+            return;
+        }
         JOptionPane.showMessageDialog(null, message, title, JOptionPane.ERROR_MESSAGE);
     }
 
@@ -2251,6 +2358,9 @@ System.out.println("Tem CR? " + codigo.contains("\r"));
      * @param title   Título da mensagem
      */
     private static void showInformationMessage(String message, String title) {
+        if (headlessMode) {
+            return;
+        }
         JOptionPane.showMessageDialog(null, message, title, JOptionPane.INFORMATION_MESSAGE);
     }
 
@@ -2261,6 +2371,9 @@ System.out.println("Tem CR? " + codigo.contains("\r"));
      * @param title   Título da mensagem
      */
     private static void showInformationMessage(JTextArea message, String title) {
+        if (headlessMode) {
+            return;
+        }
         JOptionPane.showMessageDialog(null, message, title, JOptionPane.INFORMATION_MESSAGE);
     }
 }
