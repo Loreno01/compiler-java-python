@@ -61,7 +61,9 @@ import com.feevale.stack.*;
  * <TYPE> ::= 'boolean'
  * 
  * <IDS> ::= <ID> ',' <IDS>
+ * <IDS> ::= <ID> '=' <E> ',' <IDS>
  * <IDS> ::= <ID>
+ * <IDS> ::= <ID> '=' <E>
  * 
  * =========================================================
  * Comandos
@@ -119,12 +121,16 @@ import com.feevale.stack.*;
  * =========================================================
  * Condições
  * =========================================================
- * <CONDITION> ::= <E> '>' <E>
- * <CONDITION> ::= <E> '<' <E>
- * <CONDITION> ::= <E> '>=' <E>
- * <CONDITION> ::= <E> '<=' <E>
- * <CONDITION> ::= <E> '==' <E>
- * <CONDITION> ::= <E> '!=' <E>
+ * <CONDITION> ::= <SIMPLE_CONDITION>
+ * <CONDITION> ::= <SIMPLE_CONDITION> '&&' <SIMPLE_CONDITION>
+ * <CONDITION> ::= <SIMPLE_CONDITION> '||' <SIMPLE_CONDITION>
+ * 
+ * <SIMPLE_CONDITION> ::= <E> '>' <E>
+ * <SIMPLE_CONDITION> ::= <E> '<' <E>
+ * <SIMPLE_CONDITION> ::= <E> '>=' <E>
+ * <SIMPLE_CONDITION> ::= <E> '<=' <E>
+ * <SIMPLE_CONDITION> ::= <E> '==' <E>
+ * <SIMPLE_CONDITION> ::= <E> '!=' <E>
  * 
  * =========================================================
  * Expressões
@@ -148,6 +154,12 @@ import com.feevale.stack.*;
  * <NUM> ::= [0-9]+('.'[0-9]+)?
  *
  * <ID> ::= [a-zA-Z_][a-zA-Z0-9_]*
+ * 
+ * =========================================================
+ * Comentários
+ * =========================================================
+ * Comentário de linha: duas barras
+ * Comentário de bloco: barra e asterisco/asterisco e barra
  * 
  */
 
@@ -190,22 +202,24 @@ public class Compiler {
     private static final int T_EQUAL = 35;
     private static final int T_DIFFERENT = 36;
     private static final int T_EXCLAMATION = 37;
-    private static final int T_IF = 38;
-    private static final int T_ELSE = 39;
-    private static final int T_WHILE = 40;
-    private static final int T_FOR = 41;
-    private static final int T_SWITCH = 42;
-    private static final int T_CASE = 43;
-    private static final int T_DEFAULT = 44;
-    private static final int T_BREAK = 45;
-    private static final int T_SYSTEM = 46;
-    private static final int T_OUT = 47;
-    private static final int T_PRINTLN = 48;
-    private static final int T_STRING_LITERAL = 49;
-    private static final int T_INCREMENT = 50;
-    private static final int T_DECREMENT = 51;
-    private static final int T_TRUE = 52;
-    private static final int T_FALSE = 53;
+    private static final int T_AND = 38;
+    private static final int T_OR = 39;
+    private static final int T_IF = 40;
+    private static final int T_ELSE = 41;
+    private static final int T_WHILE = 42;
+    private static final int T_FOR = 43;
+    private static final int T_SWITCH = 44;
+    private static final int T_CASE = 45;
+    private static final int T_DEFAULT = 46;
+    private static final int T_BREAK = 47;
+    private static final int T_SYSTEM = 48;
+    private static final int T_OUT = 49;
+    private static final int T_PRINTLN = 50;
+    private static final int T_STRING_LITERAL = 51;
+    private static final int T_INCREMENT = 52;
+    private static final int T_DECREMENT = 53;
+    private static final int T_TRUE = 54;
+    private static final int T_FALSE = 55;
     private static final int T_END_SOURCE = 90;
     private static final int T_LEXICAL_ERROR = 98;
     private static final int T_NULL = 99;
@@ -271,32 +285,34 @@ public class Compiler {
         MOD(8),
         PARENTHESIS(9),
         NUMBER(10),
-        BLOCK_END(11),
-        IF_BEGIN(12),
-        ELSE_BEGIN(13),
-        WHILE_BEGIN(10),
-        FOR_BEGIN(21),
-        GREATER(14),
-        SMALLER(15),
-        GREATER_EQUAL(16),
-        SMALLER_EQUAL(17),
-        EQUAL_EQUAL(18),
-        DIFFERENT(19),
-        PRINT(20),
-        LESS_TAB(22),
-        MORE_TAB(23),
-        SWITCH_BEGIN(24),
-        CASE_BEGIN(25),
-        DEFAULT_BEGIN(26),
-        CASE_BREAK(27),
-        INCREMENT(30),
-        DECREMENT(31),
-        STRING_LITERAL(32),
-        BOOLEAN_LITERAL(33);
+        GREATER(11),
+        SMALLER(12),
+        GREATER_EQUAL(13),
+        SMALLER_EQUAL(14),
+        EQUAL_EQUAL(15),
+        DIFFERENT(16),
+        AND(17),
+        OR(18),
+        NOT(19),
+        INCREMENT(20),
+        DECREMENT(21),
+        IF_BEGIN(22),
+        ELSE_BEGIN(23),
+        WHILE_BEGIN(24),
+        FOR_BEGIN(25),
+        SWITCH_BEGIN(26),
+        CASE_BEGIN(27),
+        DEFAULT_BEGIN(28),
+        CASE_BREAK(29),
+        STRING_LITERAL(30),
+        BOOLEAN_LITERAL(31),
+        PRINT(32),
+        LESS_TAB(98),
+        MORE_TAB(99);
 
         private final int code;
 
-        SemanticAction(int code) {
+        private SemanticAction(int code) {
             this.code = code;
         }
 
@@ -430,6 +446,11 @@ public class Compiler {
             FileWriter fw;
             fw = new FileWriter(pythonFile);
             BufferedWriter bfw = new BufferedWriter(fw);
+            String codigo = codePython.toString();
+
+            System.out.println("Tem CRLF? " + codigo.contains("\r\n"));
+System.out.println("Tem CR? " + codigo.contains("\r"));
+
             bfw.write(codePython.toString());
             bfw.close();
             showInformationMessage("Arquivo salvo: " + pythonFile, "Salvando arquivo!");
@@ -620,18 +641,17 @@ public class Compiler {
     }
 
     // <IDS> ::= <ID> ',' <IDS>
+    // <IDS> ::= <ID> '=' <E> ',' <IDS>
     // <IDS> ::= <ID>
     // <IDS> ::= <ID> '=' <E>
     private static void ids()
             throws IOException, LexicalErrorException, SyntacticErrorException, SemanticErrorException {
         id();
 
-        // Check if there's an assignment in the declaration
         if (token == T_EQUAL) {
             searchNextToken();
             e();
             semanticRule(SemanticAction.VARIABLE_DECLARE);
-            // Manually generate assignment code for initialized variables
             nodo_2 = semanticStack.pop();
             codePython.append(tabulation(indentationLevel));
             codePython.append(variableName + " = " + nodo_2.getCodeLowerCase() + "\n");
@@ -655,7 +675,7 @@ public class Compiler {
             }
         }
 
-        accumulateRecognizedSyntacticRule("<IDS> ::= <ID> ',' <IDS> | <ID> | <ID> '=' <E>");
+        accumulateRecognizedSyntacticRule("<IDS> ::= <ID> ',' <IDS> | <ID> '=' <E> ',' <IDS> | <ID> | <ID> '=' <E>");
     }
 
     // <CMDS> ::= <CMD> <CMDS>
@@ -790,7 +810,7 @@ public class Compiler {
                                 searchNextToken();
                                 cmds();
                                 if (token == T_BRACE_CLOSE) {
-                                    indentationLevel--;
+                                    semanticRule(SemanticAction.LESS_TAB);
                                     searchNextToken();
                                 } else {
                                     logSyntaxError("Esperava '}', mas encontrou: " + lexeme);
@@ -1032,13 +1052,79 @@ public class Compiler {
         accumulateRecognizedSyntacticRule("<ASSIGNMENT> ::= <ID> '=' <E> | <ID> '++' | <ID> '--'");
     }
 
-    // <CONDITION> ::= <E> '>' <E>
-    // <CONDITION> ::= <E> '<' <E>
-    // <CONDITION> ::= <E> '>=' <E>
-    // <CONDITION> ::= <E> '<=' <E>
-    // <CONDITION> ::= <E> '==' <E>
-    // <CONDITION> ::= <E> '!=' <E>
+    // <CONDITION> ::= <SIMPLE_CONDITION>
+    // <CONDITION> ::= <SIMPLE_CONDITION> '&&' <SIMPLE_CONDITION>
+    // <CONDITION> ::= <SIMPLE_CONDITION> '||' <SIMPLE_CONDITION>
     private static void condition()
+            throws IOException, LexicalErrorException, SyntacticErrorException, SemanticErrorException {
+
+        if (token == T_EXCLAMATION) {
+
+            searchNextToken();
+
+            if (token == T_PARENTHESIS_OPEN) {
+
+                searchNextToken();
+
+                condition();
+
+                if (token != T_PARENTHESIS_CLOSE) {
+                    logSyntaxError("Esperava ')'");
+                }
+
+                searchNextToken();
+
+                semanticRule(SemanticAction.NOT);
+
+                return;
+            }
+
+            simpleCondition();
+
+            semanticRule(SemanticAction.NOT);
+
+            return;
+        }
+
+        boolean hasNot = false;
+
+        if (token == T_EXCLAMATION) {
+            hasNot = true;
+            searchNextToken();
+        }
+
+        simpleCondition();
+
+        if (hasNot) {
+            semanticRule(SemanticAction.NOT);
+        }
+
+        while (token == T_AND || token == T_OR) {
+
+            int logicalOperator = token;
+
+            searchNextToken();
+
+            simpleCondition();
+
+            if (logicalOperator == T_AND) {
+                semanticRule(SemanticAction.AND);
+            } else {
+                semanticRule(SemanticAction.OR);
+            }
+        }
+
+        accumulateRecognizedSyntacticRule(
+                "<CONDITION> ::= <SIMPLE_CONDITION> { ('&&' | '||') <SIMPLE_CONDITION> }");
+    }
+
+    // <SIMPLE_CONDITION> ::= <E> '>' <E>
+    // <SIMPLE_CONDITION> ::= <E> '<' <E>
+    // <SIMPLE_CONDITION> ::= <E> '>=' <E>
+    // <SIMPLE_CONDITION> ::= <E> '<=' <E>
+    // <SIMPLE_CONDITION> ::= <E> '==' <E>
+    // <SIMPLE_CONDITION> ::= <E> '!=' <E>
+    private static void simpleCondition()
             throws IOException, LexicalErrorException, SyntacticErrorException, SemanticErrorException {
         e();
         switch (token) {
@@ -1220,7 +1306,7 @@ public class Compiler {
         accumulateRecognizedSyntacticRule("<ID> ::= [a-zA-Z_][a-zA-Z0-9_]*");
     }
 
-    static void searchNextToken() throws IOException, LexicalErrorException {
+    private static void searchNextToken() throws IOException, LexicalErrorException {
         if (lexeme != null) {
             lastLexeme = new String(lexeme);
         }
@@ -1311,11 +1397,23 @@ public class Compiler {
                 token = T_ID;
             }
         } else if ((lookAhead >= '0') && (lookAhead <= '9')) {
+            boolean hasDecimalPoint = false;
             sbLexeme.append(lookAhead);
             moveLookAhead();
-            while ((lookAhead >= '0') && (lookAhead <= '9')) {
-                sbLexeme.append(lookAhead);
-                moveLookAhead();
+            while (true) {
+                if ((lookAhead >= '0') && (lookAhead <= '9')) {
+                    sbLexeme.append(lookAhead);
+                    moveLookAhead();
+                } else if (lookAhead == '.' && !hasDecimalPoint) {
+                    hasDecimalPoint = true;
+                    sbLexeme.append(lookAhead);
+                    moveLookAhead();
+                    if (!(lookAhead >= '0' && lookAhead <= '9')) {
+                        logLexicalError("Número decimal inválido");
+                    }
+                } else {
+                    break;
+                }
             }
             token = T_NUMBER;
         } else if (lookAhead == '"') {
@@ -1335,44 +1433,44 @@ public class Compiler {
             token = T_STRING_LITERAL;
         } else if (lookAhead == '{') {
             sbLexeme.append(lookAhead);
-            token = T_BRACE_OPEN;
             moveLookAhead();
+            token = T_BRACE_OPEN;
         } else if (lookAhead == '}') {
             sbLexeme.append(lookAhead);
-            token = T_BRACE_CLOSE;
             moveLookAhead();
+            token = T_BRACE_CLOSE;
         } else if (lookAhead == '[') {
             sbLexeme.append(lookAhead);
-            token = T_BRACKET_OPEN;
             moveLookAhead();
+            token = T_BRACKET_OPEN;
         } else if (lookAhead == ']') {
             sbLexeme.append(lookAhead);
-            token = T_BRACKET_CLOSE;
             moveLookAhead();
+            token = T_BRACKET_CLOSE;
         } else if (lookAhead == '(') {
             sbLexeme.append(lookAhead);
-            token = T_PARENTHESIS_OPEN;
             moveLookAhead();
+            token = T_PARENTHESIS_OPEN;
         } else if (lookAhead == ')') {
             sbLexeme.append(lookAhead);
-            token = T_PARENTHESIS_CLOSE;
             moveLookAhead();
+            token = T_PARENTHESIS_CLOSE;
         } else if (lookAhead == ';') {
             sbLexeme.append(lookAhead);
-            token = T_SEMICOLON;
             moveLookAhead();
+            token = T_SEMICOLON;
         } else if (lookAhead == ':') {
             sbLexeme.append(lookAhead);
-            token = T_COLON;
             moveLookAhead();
+            token = T_COLON;
         } else if (lookAhead == ',') {
             sbLexeme.append(lookAhead);
-            token = T_COMMA;
             moveLookAhead();
+            token = T_COMMA;
         } else if (lookAhead == '.') {
             sbLexeme.append(lookAhead);
-            token = T_POINT;
             moveLookAhead();
+            token = T_POINT;
         } else if (lookAhead == '+') {
             sbLexeme.append(lookAhead);
             moveLookAhead();
@@ -1399,8 +1497,46 @@ public class Compiler {
             token = T_MULTIPLY;
         } else if (lookAhead == '/') {
             sbLexeme.append(lookAhead);
-            token = T_DIVIDE;
             moveLookAhead();
+            // Comentário de linha
+            if (lookAhead == '/') {
+                sbLexeme.append(lookAhead);
+                moveLookAhead();
+                while (lookAhead != END_FILE && lookAhead != '\10') {
+                    moveLookAhead();
+                }
+                searchNextToken();
+                return;
+            }
+            // Comentário de bloco
+            else if (lookAhead == '*') {
+                sbLexeme.append(lookAhead);
+                moveLookAhead();
+                boolean foundEnd = false;
+                while (lookAhead != END_FILE) {
+                    if (lookAhead == '*') {
+                        sbLexeme.append(lookAhead);
+                        moveLookAhead();
+                        if (lookAhead == '/') {
+                            sbLexeme.append(lookAhead);
+                            moveLookAhead();
+                            foundEnd = true;
+                            break;
+                        }
+                    } else {
+                        moveLookAhead();
+                    }
+                }
+                if (!foundEnd) {
+                    logLexicalError("Comentário de bloco não finalizado");
+                }
+                searchNextToken();
+                return;
+            }
+            // Operador de divisão
+            else {
+                token = T_DIVIDE;
+            }
         } else if (lookAhead == '%') {
             sbLexeme.append(lookAhead);
             token = T_MOD;
@@ -1445,6 +1581,26 @@ public class Compiler {
             } else {
                 token = T_EXCLAMATION;
             }
+        } else if (lookAhead == '&') {
+            sbLexeme.append(lookAhead);
+            moveLookAhead();
+            if (lookAhead == '&') {
+                sbLexeme.append(lookAhead);
+                moveLookAhead();
+                token = T_AND;
+            } else {
+                token = T_LEXICAL_ERROR;
+            }
+        } else if (lookAhead == '|') {
+            sbLexeme.append(lookAhead);
+            moveLookAhead();
+            if (lookAhead == '|') {
+                sbLexeme.append(lookAhead);
+                moveLookAhead();
+                token = T_OR;
+            } else {
+                token = T_LEXICAL_ERROR;
+            }
         } else if (lookAhead == END_FILE) {
             token = T_END_SOURCE;
         } else {
@@ -1461,7 +1617,7 @@ public class Compiler {
         }
     }
 
-    static void moveLookAhead() throws IOException {
+    private static void moveLookAhead() throws IOException {
         if ((pointer + 1) > sourceLine.length()) {
 
             currentLine++;
@@ -1603,6 +1759,12 @@ public class Compiler {
             case T_EXCLAMATION:
                 tokenLexeme.append("T_EXCLAMATION");
                 break;
+            case T_AND:
+                tokenLexeme.append("T_AND");
+                break;
+            case T_OR:
+                tokenLexeme.append("T_OR");
+                break;
             case T_IF:
                 tokenLexeme.append("T_IF");
                 break;
@@ -1701,9 +1863,8 @@ public class Compiler {
                 codePython.append(variableName + " = " + pythonDefaultValue(currentType) + "\n");
                 break;
             case VARIABLE_USAGE:
-                if (checkExistsInSymbolsTable(variableName)) {
+                if (checkExistsInSymbolsTable(variableName))
                     semanticStack.push(variableName, ruleNumber);
-                }
                 break;
             case ASSIGNMENT:
                 nodo_2 = semanticStack.pop();
@@ -1711,11 +1872,9 @@ public class Compiler {
                 if (readingForStep) {
                     String expression = nodo_2.getCodeLowerCase();
                     if (expression.contains("+")) {
-                        forStep = expression.substring(
-                                expression.indexOf("+") + 1).trim();
+                        forStep = expression.substring(expression.indexOf("+") + 1).trim();
                     } else if (expression.contains("-")) {
-                        forStep = "-" + expression.substring(
-                                expression.indexOf("-") + 1).trim();
+                        forStep = "-" + expression.substring(expression.indexOf("-") + 1).trim();
                     } else {
                         forStep = "1";
                     }
@@ -1723,67 +1882,6 @@ public class Compiler {
                     codePython.append(tabulation(indentationLevel));
                     codePython.append(nodo_1.getCodeLowerCase() + " = " + nodo_2.getCodeLowerCase() + "\n");
                 }
-                break;
-            case INCREMENT:
-                nodo_1 = semanticStack.pop();
-                if (readingForStep) {
-                    forStep = "1";
-                } else {
-                    codePython.append(tabulation(indentationLevel));
-                    codePython.append(nodo_1.getCodeLowerCase() + " = " + nodo_1.getCodeLowerCase() + " + 1\n");
-                }
-                break;
-            case DECREMENT:
-                nodo_1 = semanticStack.pop();
-                if (readingForStep) {
-                    forStep = "-1";
-                } else {
-                    codePython.append(tabulation(indentationLevel));
-                    codePython.append(nodo_1.getCodeLowerCase() + " = " + nodo_1.getCodeLowerCase() + " - 1\n");
-                }
-                break;
-            case IF_BEGIN:
-                nodo_1 = semanticStack.pop();
-                codePython.append(tabulation(indentationLevel));
-                codePython.append("if " + nodo_1.getCodeLowerCase() + ":\n");
-                indentationLevel++;
-                break;
-            case ELSE_BEGIN:
-                codePython.append(tabulation(indentationLevel));
-                codePython.append("else:\n");
-                indentationLevel++;
-                break;
-            case WHILE_BEGIN:
-                nodo_1 = semanticStack.pop();
-                codePython.append(tabulation(indentationLevel));
-                codePython.append("while " + nodo_1.getCodeLowerCase() + ":\n");
-                indentationLevel++;
-                break;
-            case FOR_BEGIN:
-                String rangeEnd = forEnd;
-                if (forConditionOperator != null) {
-                    switch (forConditionOperator) {
-                        case "<=":
-                            if (forStep == null || !forStep.startsWith("-")) {
-                                rangeEnd = forEnd + " + 1";
-                            }
-                            break;
-                        case ">=":
-                            if (forStep == null || forStep.startsWith("-")) {
-                                rangeEnd = forEnd + " - 1";
-                            }
-                            break;
-                        default:
-                            break;
-                    }
-                }
-                codePython.append(tabulation(indentationLevel));
-                codePython.append("for " + forVariable + " in range(" + forStart + ", " + rangeEnd);
-                if (!forStep.equals("1")) {
-                    codePython.append(", " + forStep);
-                }
-                codePython.append("):\n");
-                indentationLevel++;
                 break;
             case ADD:
                 nodo_2 = semanticStack.pop();
@@ -1847,16 +1945,77 @@ public class Compiler {
                 nodo_1 = semanticStack.pop();
                 semanticStack.push(nodo_1.getCodeLowerCase() + " != " + nodo_2.getCodeLowerCase(), ruleNumber);
                 break;
-            case PRINT:
+            case AND:
+                nodo_2 = semanticStack.pop();
+                nodo_1 = semanticStack.pop();
+                semanticStack.push(nodo_1.getCodeLowerCase() + " and " + nodo_2.getCodeLowerCase(), ruleNumber);
+                break;
+            case OR:
+                nodo_2 = semanticStack.pop();
+                nodo_1 = semanticStack.pop();
+                semanticStack.push(nodo_1.getCodeLowerCase() + " or " + nodo_2.getCodeLowerCase(), ruleNumber);
+                break;
+            case NOT:
+                nodo_1 = semanticStack.pop();
+                semanticStack.push("not (" + nodo_1.getCodeLowerCase() + ")", ruleNumber);
+                break;
+            case INCREMENT:
+                nodo_1 = semanticStack.pop();
+                if (readingForStep) {
+                    forStep = "1";
+                } else {
+                    codePython.append(tabulation(indentationLevel));
+                    codePython.append(nodo_1.getCodeLowerCase() + " = " + nodo_1.getCodeLowerCase() + " + 1\n");
+                }
+                break;
+            case DECREMENT:
+                nodo_1 = semanticStack.pop();
+                if (readingForStep) {
+                    forStep = "-1";
+                } else {
+                    codePython.append(tabulation(indentationLevel));
+                    codePython.append(nodo_1.getCodeLowerCase() + " = " + nodo_1.getCodeLowerCase() + " - 1\n");
+                }
+                break;
+            case IF_BEGIN:
                 nodo_1 = semanticStack.pop();
                 codePython.append(tabulation(indentationLevel));
-                codePython.append("print(" + nodo_1.getCodeLowerCase() + ")\n");
+                codePython.append("if " + nodo_1.getCodeLowerCase() + ":\n");
+                semanticRule(SemanticAction.MORE_TAB);
                 break;
-            case LESS_TAB:
-                indentationLevel--;
+            case ELSE_BEGIN:
+                codePython.append(tabulation(indentationLevel));
+                codePython.append("else:\n");
+                semanticRule(SemanticAction.MORE_TAB);
                 break;
-            case MORE_TAB:
-                indentationLevel++;
+            case WHILE_BEGIN:
+                nodo_1 = semanticStack.pop();
+                codePython.append(tabulation(indentationLevel));
+                codePython.append("while " + nodo_1.getCodeLowerCase() + ":\n");
+                semanticRule(SemanticAction.MORE_TAB);
+                break;
+            case FOR_BEGIN:
+                String rangeEnd = forEnd;
+                if (forConditionOperator != null) {
+                    switch (forConditionOperator) {
+                        case "<=":
+                            if (forStep == null || !forStep.startsWith("-"))
+                                rangeEnd = forEnd + " + 1";
+                            break;
+                        case ">=":
+                            if (forStep == null || forStep.startsWith("-"))
+                                rangeEnd = forEnd + " - 1";
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                codePython.append(tabulation(indentationLevel));
+                codePython.append("for " + forVariable + " in range(" + forStart + ", " + rangeEnd);
+                if (!forStep.equals("1"))
+                    codePython.append(", " + forStep);
+                codePython.append("):\n");
+                semanticRule(SemanticAction.MORE_TAB);
                 break;
             case SWITCH_BEGIN:
                 variavel = variableName;
@@ -1871,12 +2030,12 @@ public class Compiler {
                 } else {
                     codePython.append("elif " + variavel + " == " + nodo_1.getCodeLowerCase() + ":\n");
                 }
-                indentationLevel++;
+                semanticRule(SemanticAction.MORE_TAB);
                 break;
             case DEFAULT_BEGIN:
                 codePython.append(tabulation(indentationLevel));
                 codePython.append("else:\n");
-                indentationLevel++;
+                semanticRule(SemanticAction.MORE_TAB);
                 break;
             case CASE_BREAK:
                 // Break do switch Java não possui equivalente em Python
@@ -1892,6 +2051,17 @@ public class Compiler {
                 } else {
                     semanticStack.push(lexeme, ruleNumber);
                 }
+                break;
+            case PRINT:
+                nodo_1 = semanticStack.pop();
+                codePython.append(tabulation(indentationLevel));
+                codePython.append("print(" + nodo_1.getCodeLowerCase() + ")\n");
+                break;
+            case LESS_TAB:
+                indentationLevel--;
+                break;
+            case MORE_TAB:
+                indentationLevel++;
                 break;
             default:
                 break;
@@ -1920,13 +2090,33 @@ public class Compiler {
      * @param variableType Tipo da variável em Java
      * @throws SemanticErrorException
      */
-    private static void insertIntoSymbolsTable(String lastLexeme, String variableType)
-            throws SemanticErrorException {
-
+    private static void insertIntoSymbolsTable(String lastLexeme, String variableType) throws SemanticErrorException {
         if (symbolsTable.containsKey(lastLexeme)) {
             throw new SemanticErrorException("Variável " + lastLexeme + " já declarada!\nLinha: " + currentLine);
         } else {
             symbolsTable.put(lastLexeme, variableType);
+        }
+    }
+
+    /**
+     * Define valor padrão para variáveis não inicializadas em Python, de acordo com
+     * seu tipo em Java
+     * 
+     * @param type Tipo da variável em Java
+     * @return String contendo a inicialização da variável em Python
+     */
+    private static String pythonDefaultValue(String type) {
+        switch (type) {
+            case "int":
+                return "0";
+            case "double":
+                return "0.0";
+            case "String":
+                return "\"\"";
+            case "boolean":
+                return "False";
+            default:
+                return "None";
         }
     }
 
@@ -1938,12 +2128,13 @@ public class Compiler {
      */
     private static String tabulation(int quantity) {
         StringBuffer stringBuffer = new StringBuffer();
-        if (quantity < 0) {
+        if (quantity < 0)
             quantity = 0;
-        }
-        for (int t = 0; t < quantity; t++) {
+
+        for (int tab = 0; tab < quantity; tab++) {
             stringBuffer.append("    ");
         }
+
         return stringBuffer.toString();
     }
 
@@ -1994,27 +2185,6 @@ public class Compiler {
     }
 
     /**
-     * Define valor padrão para variáveis não inicializadas em Python, de acordo com
-     * seu tipo em Java
-     * 
-     * @param type Tipo da variável em Java
-     */
-    private static String pythonDefaultValue(String type) {
-        switch (type) {
-            case "int":
-                return "0";
-            case "double":
-                return "0.0";
-            case "String":
-                return "\"\"";
-            case "boolean":
-                return "False";
-            default:
-                return "None";
-        }
-    }
-
-    /**
      * Registra um erro semântico encontrado durante a análise semântica
      * 
      * @param msg Mensagem de erro a ser registrada
@@ -2038,6 +2208,12 @@ public class Compiler {
         throw new SemanticErrorException(message.toString());
     }
 
+    /**
+     * Exibe os resultados da compilação em duas janelas
+     * 
+     * 1ª: Lista de tokens identificados durante a análise léxica
+     * 2ª: Resumo da compilação contendo as regras reconhecidas e o status final
+     */
     private static void displayOutput() {
         JTextArea text = new JTextArea();
         text.append(identifiedTokens.toString());

@@ -7,9 +7,17 @@ c = 0
 i = 0
 count = 0
 f = 0.0
+name = ""
 condition = False
 condition2 = False
-name = ""
+testDouble1 = 0.0
+testDouble1 = 10
+testDouble2 = 0.0
+testDouble2 = 10.5
+testDouble3 = 0.0
+testDouble3 = 0.25
+testDouble4 = 0.0
+testDouble4 = 123456.789
 test = 0
 test = 2 * 10
 x = 10
@@ -33,6 +41,10 @@ if x < 2:
     print(1)
 if b != c:
     print("\'b\' é diferente de \'c\'")
+if a > 0 and b > 0:
+    if a > 0 or b > 0:
+        if not (test < 0):
+            print("IFs encadeados")
 while x > 7:
     print(x)
     x = x - 1

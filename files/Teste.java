@@ -1,10 +1,24 @@
 public class Teste {
     public static void main(String[] args) {
+        // Teste de comentário de linha
+
+        /*
+         * Teste comentário de bloco
+         * com várias linhas
+         */
+
         int x, a, b, c, i, count;
         double f;
+        String name;
+
         boolean condition;
         boolean condition2;
-        String name;
+
+        double testDouble1 = 10;
+        double testDouble2 = 10.5;
+        double testDouble3 = 0.25;
+        double testDouble4 = 123456.789;
+
         int test = 2 * 10;
 
         x = 10;
@@ -15,6 +29,7 @@ public class Teste {
         condition = true;
         condition2 = false;
 
+        // Outro comentário de linha
         b = x * 5;
         c = x / 5;
         a = (b + c) % 7;
@@ -22,9 +37,7 @@ public class Teste {
         System.out.println(a);
         System.out.println(f);
 
-        if (x > 2)
-
-        {
+        if (x > 2) {
             x = x + 1;
             System.out.println(x);
         } else {
@@ -37,6 +50,15 @@ public class Teste {
 
         if (b != c) {
             System.out.println("\'b\' é diferente de \'c\'");
+        }
+
+        // Teste de IFs encadeados
+        if (a > 0 && b > 0) {
+            if (a > 0 || b > 0) {
+                if (!(test < 0)) {
+                    System.out.println("IFs encadeados");
+                }
+            }
         }
 
         while (x > 7) {
@@ -56,6 +78,7 @@ public class Teste {
             System.out.println(i);
         }
 
+        // Teste do switch
         count = 12;
         switch (count) {
             case 10:
